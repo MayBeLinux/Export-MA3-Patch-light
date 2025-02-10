@@ -2,7 +2,7 @@
   local ERR1 = "Erreur 1 : USB Stick Not Found"
   local ERR2 = "Erreur 2 : PDF Corrupt"
   local ERR3 = "Erreur 3 : Tables Stick empty now !"
-  local print = Printf -- Fonctions GMA3
+  local print = Printf
   local error = ErrPrintf
   local Machines, Time, ProgrammeursNames, ShowsNow, UserName = os.getenv("COMPUTERNAME") or os.getenv("HOSTNAME"), os.date("%Y-%m-%d %H:%M:%S"), "https://github.com/MayBeLinux", Root().manetsocket.showfile , UsersName
 
@@ -10,15 +10,15 @@
       local file = io.open(path, "wb")
       if not file then error(ERR2) return end 
 
-      -- 1. Version du PDF
+      
       file:write("%PDF-1.4\n")
 
-      -- Constantes
-      local maxRowsPerPage = 17  -- Nombres de lignes par page
-      local pageWidth = 612      -- Largeur en points
-      local pageHeight = 792     -- Hauteur en points
+      
+      local maxRowsPerPage = 17 
+      local pageWidth = 612 
+      local pageHeight = 792 
       local margin = 50
-      local rowHeight = 35       -- Ajustement de l'espacement des lignes
+      local rowHeight = 35 
       local headerYFirstPage = 650  
       local headerYOtherPages = 760 
       local startX = 50          
@@ -28,7 +28,7 @@
       local xrefOffset = 0
       local pageObjects = {}
 
-      -- Fonction pour écrire un objet PDF
+      
       local function writeObject(object)
           xrefTable[#xrefTable + 1] = string.format("%010d 00000 n ", xrefOffset)
           local data = object .. "\n"
@@ -36,7 +36,7 @@
           file:write(data)
       end
 
-      -- En-tête de la première page
+      
       local function generateFirstPageHeader()
           return table.concat({
               string.format("BT\n/F1 18 Tf\n200 775 Td\n(||  MA3 Data Extractor  ||  ) Tj\nET\n"),
@@ -48,7 +48,7 @@
           })
       end
 
-      -- Fonction pour générer une ligne
+      
       local function generateRow(row)
           return {
               string.format("%s", row.FID),
@@ -60,17 +60,17 @@
           }, row.Mode 
       end
 
-      -- Contenu d'une page
+      
       local function generatePageContent(pageFixtures, isFirstPage)
           local content = ""
           local headerY = isFirstPage and headerYFirstPage or headerYOtherPages
 
-          -- En-tête spécial pour la première page
+          
           if isFirstPage then
               content = generateFirstPageHeader()
           end
 
-          -- En-tête des colonnes
+          
           local headers = {"FID", "IDType", "CID", "Name", "Fixture Type / Mode", "U.Addrs"}
           for i, header in ipairs(headers) do
               content = content .. string.format(
@@ -79,7 +79,7 @@
               )
           end
 
-          -- Lignes de données avec des lignes noires entre elles
+          
           local y = headerY - 20
           for _, row in ipairs(pageFixtures) do
               if row.FID == "------" then
@@ -89,16 +89,16 @@
                   ) .. "0 0 0 rg\n"
                   y = y - (rowHeight - 2)
               else
-                  -- Positionner la ligne noire sous le texte
+                  
                   local ligneNoireY = y - 20  
 
-                  -- Dessiner la ligne noire bien positionnée
+                  
                   content = content .. string.format(
                       "0 0 0 RG\n%d %d m\n%d %d l\nS\n",
                       startX - 31, ligneNoireY, pageWidth - margin + 40, ligneNoireY
                   )
 
-                  -- Ajouter les données normales en texte standard
+                  
                   local rowData, mode = generateRow(row)
                   for i, value in ipairs(rowData) do
                       content = content .. string.format(
@@ -107,13 +107,13 @@
                       )
                   end
 
-                  -- Afficher Mode sous FixtureTypes
+                  
                   content = content .. string.format(
                       "BT\n/F1 10 Tf\n%d %d Td\n(%s) Tj\nET\n",
                       startX + columnOffsets[5], y - 10, mode  
                   )
 
-                  -- Ajuster la hauteur de la ligne suivante
+                  
                   y = y - rowHeight
               end
           end
@@ -121,7 +121,7 @@
           return content
       end
 
-      -- Générer les pages
+      
       local currentPage = 3
       local isFirstPage = true
       for i = 1, #fixtures, maxRowsPerPage do
@@ -130,7 +130,7 @@
               pageFixtures[#pageFixtures + 1] = fixtures[j]
           end
 
-          -- Ajouter la page au catalogue
+          
           local pageContent = generatePageContent(pageFixtures, isFirstPage)
           pageObjects[#pageObjects + 1] = currentPage
           writeObject(currentPage .. " 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " .. pageWidth .. " " .. pageHeight .. "] /Contents " .. (currentPage + 1) .. " 0 R >>\nendobj")
@@ -139,41 +139,41 @@
           isFirstPage = false
       end
 
-      -- Catalogue des pages
+      
       local kids = table.concat(pageObjects, " 0 R ") .. " 0 R"
       writeObject("2 0 obj\n<< /Type /Pages /Count " .. #pageObjects .. " /Kids [" .. kids .. "] >>\nendobj")
 
-      -- Catalogue principal
+      
       writeObject("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj")
 
-      -- Table des références croisées
+      
       file:write("xref\n0 " .. (#xrefTable + 1) .. "\n")
       file:write("0000000000 65535 f \n")
       for _, xref in ipairs(xrefTable) do
           file:write(xref .. "\n")
       end
 
-      -- Trailer
+      
       file:write("trailer\n<< /Size " .. (#xrefTable + 1) .. " /Root 1 0 R >>\nstartxref\n" .. xrefOffset .. "\n%%EOF")
 
       file:close()
-      print("PDF généré : %s", documentsnames)
+      print("PDF : %s" , documentsnames , "Thanks : %s", Users)
   end
-  -- Code GRANDMA3  --
+  
   local inputs = {
-          {name = "Documents Name :",values = defaultFileName},-- MODIFIE LE NOM PAR DEFAULT DU DOCUMENTS PDF !
-          { name = "Users" , values = usersName, }}-- MODIFIE LE NOM DE L'AUTEUR PAR DEFAULT PAR CELUI VOULUES
+          {name = "Documents Name :",values = defaultFileName},
+          { name = "Users" , values = usersName, }}
 
   local selectors = {
           { name="USB DRIVES", values={}, type=1},
           { name = "Statistic Tables", selectedValues = 2, values ={["Include"]=1 , ["Exclude"]=2} , type=1}
           }
 
-        local idCounter = 1  -- Counter for increments
+        local idCounter = 1 
 
-  local drive = Root().Temp.DriveCollect  -- Déclarations extérieurs de drive sinon l'autres fonctions n'y aura pas accés (N'oublies pas Josh, la portées lexicales de tes déclarations !!)
+  local drive = Root().Temp.DriveCollect 
   function usbStickConnected()  
-  local connectedUSB = false                                                                                                    -- Valeurs fausse tant que il n' y a pas de clés usb détectées !
+  local connectedUSB = false     
   selectors[1].values = {}
   local usbDrive = ""
     for _, usbStick in ipairs(drive) do
@@ -193,11 +193,11 @@
     userRequest()
   else
 
-  MessageBox({    -- Création d'une boite de dialogue de refus en cas d'absence de clés usb dans la machines actuelles ?     ,   
+  MessageBox({   
         title = ERR1,
         message = "Please insert a usb stick or check your usb port !",
         commands = {{value = 1, name = "OK"}},
-        timeout = 5000 -- temps en milisecondes avant que le PopUp MessaGEBOX ne se refermes !
+        timeout = 5000
       })
     end 
   end
@@ -215,8 +215,6 @@
         inputs = inputs,
         selectors = selectors,
         backColor = "Global.Default",
-        -- timeout = 10000, --milliseconds
-        -- timeoutResultCancel = false,
         icon = "logo_small",
         titleTextColor = "Global.AlertText",
         messageTextColor = "Global.Text",
@@ -225,30 +223,22 @@
     )
     
   for k , v in pairs(settings.selectors) do
-    if k == 'USB DRIVES' then 
-      Printf("Selector= '%d'",v) -- Lignes de test pour bien vérifier que je récupére bien la valeurs Selectors dans values ! 
+    if k == 'USB DRIVES' then  
       drivePath = drive[v].path
-      print(drivePath)
     end
   end
-
-
-
-
-  if settings.result == 1 then 
+if settings.result == 1 then 
       for k , v in pairs(settings.selectors) do
-    if k == 'USB DRIVES' then 
-      Printf("Selector= '%d'",v) -- Lignes de test pour bien vérifier que je récupére bien la valeurs Selectors dans values ! 
-      drivePath = drive[v].path
-      print(drivePath)
+    if k == 'USB DRIVES' then
+        drivePath = drive[v].path
       
     elseif k == nil then 
       print(ERR3)
     end
   end
-    local fileName = settings.inputs["Documents Name :"]  -- Noms du Documents !
-    local UsersName = settings.inputs["Users"]  --  Noms DU ProgrAMMEUR !    
-    local summaryTable = settings.selectors["Statistic PDF"] -- Tables des statistiques !  PAS ENCORE PRESENT DANS CETTE PREMIERES VERSION (C 
+    local fileName = settings.inputs["Documents Name :"] 
+    local UsersName = settings.inputs["Users"]     
+    local summaryTable = settings.selectors["Statistic PDF"] 
     local FixturesData = collectFixtureData()
     generatePDF(drivePath .. "/" .. fileName .. ".pdf", FixturesData, fileName, UsersName)
     
@@ -257,7 +247,7 @@
         title = "PDF EXPORTER ABORT",
         message = "Export abort, please restart the plugin",
         commands = {{value = 1, name = "OK"}},
-        timeout = 5000 -- temps en milisecondes avant que le PopUp MessaGEBOX ne se refermes !
+        timeout = 5000 
       })
     end
   end
@@ -266,12 +256,12 @@
 
 
   function extractFixturesFromGrouping(grouping, AllPatch, indent)
-      indent = indent or ""  -- Ajout d'un indent pour afficher l'imbrication si nécessaire
+      indent = indent or "" 
 
-      -- Vérifier si le grouping a des enfants
+      
       local children = grouping:Children()
       for _, child in ipairs(children) do
-          -- Vérifier si l'enfant est aussi un grouping
+         
           if child.fixturetype and child.fixturetype.name == "Grouping" then
               table.insert(AllPatch, {
                   FID = "------",
@@ -282,10 +272,10 @@
                   Mode = "------",
                   UAddrs = "------"
               })
-              -- Appel récursif pour traiter ce nouveau grouping
-              extractFixturesFromGrouping(child, AllPatch, indent .. "  ")  -- Ajout d'un indent pour afficher l'imbrication
+              
+              extractFixturesFromGrouping(child, AllPatch, indent .. "  ")  
           else
-              -- Ajouter une fixture normale
+             
               table.insert(AllPatch, {
                   FID = child.fid or "None",
                   IDType = child.idtype or "None",
@@ -300,11 +290,11 @@
   end
 
   function collectFixtureData()
-      local AllPatch = {} -- Réinitialisation des données des Fixtures
+      local AllPatch = {} 
 
       for _, stages in ipairs(Patch().Stages) do 
           for _, fixture in ipairs(stages.fixtures) do
-              -- Vérifier si c'est un "Grouping"
+              
               if fixture.fixturetype and fixture.fixturetype.name == "Grouping" then
                   table.insert(AllPatch, {
                       FID = "------",
@@ -316,11 +306,10 @@
                       UAddrs = "------"
                   })
 
-                  -- Appel de la fonction récursive pour parcourir l'arborescence complète
+                  
                   extractFixturesFromGrouping(fixture, AllPatch, "  ")
               else
-                  -- Ajouter les Fixtures normaux
-                  table.insert(AllPatch, {
+                   table.insert(AllPatch, {
                       FID = fixture.fid or "None",
                       IDType = fixture.idtype or "None",
                       CID = fixture.cid or "None",
@@ -334,19 +323,9 @@
       end
       return AllPatch
   end
-
-
-  -- Fonction principale du plug-in
-  local function Main(displayHandle, argument)
-      Printf("Plugin démarré sur l'affichage %s", tostring(displayHandle)) -- Message permettant de voir ou ce situe le début du plugin  ! 
-
-      if argument then
-        usbStickConnected()
-
-      else
-          Printf("⚠️ Aucun argument fourni. Exécution par défaut : Détection USB.")
-          usbStickConnected()
-      end
+local function Main(displayHandle, argument)  
+  if argument then usbStickConnected()
+  else usbStickConnected() end
   end
 
   return Main
