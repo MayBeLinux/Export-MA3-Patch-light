@@ -1,4 +1,4 @@
-
+-- help ##leonreucher##
   local ERR1 = "Erreur 1 : USB Stick Not Found"
   local ERR2 = "Erreur 2 : PDF Corrupt"
   local ERR3 = "Erreur 3 : Tables Stick empty now !"
