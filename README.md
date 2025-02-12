@@ -1,4 +1,4 @@
-# Export-MA3-Patch-light
+# Export-MA3-Patch-lite
 # MA3 Fixture Data Exporter
 
 ## Description
