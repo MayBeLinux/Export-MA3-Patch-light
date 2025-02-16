@@ -9,6 +9,7 @@ Ce plugin permet d'exporter les données des Fixtures de **grandMA3** vers un fi
 - Exportation des Fixtures sous forme de tableau dans un fichier PDF.
 - Interface utilisateur pour sélectionner le nom du fichier et l'auteur.
 - Vérification de la présence d'une clé USB avant l'export.
+- Exportation d'une page de statistique
 
 ## Installation
 1. **Télécharge** le fichier `.lua` du plugin.
@@ -34,4 +35,3 @@ Ce plugin permet d'exporter les données des Fixtures de **grandMA3** vers un fi
 Ce projet est sous licence **MIT**. Vous êtes libre de le modifier et de le redistribuer sous réserve de mentionner l’auteur original.
 
 ---
-🔥 **Améliorations à venir** : ajout de statistiques et d'autres formats d'exportation !
