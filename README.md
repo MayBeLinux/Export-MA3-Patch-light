@@ -22,7 +22,7 @@ Ce plugin permet d'exporter les données des Fixtures de **grandMA3** vers un fi
 3. **Entrer le nom du fichier et l’auteur**.
 4. **Valider** et attendre la génération du PDF.
 5. **Retrouver le fichier PDF** sur la clé USB sélectionnée.
-=..
+
 ## Dépendances
 - **grandMA3** (dernière version recommandée).
 - **Clé USB** pour l'exportation.
