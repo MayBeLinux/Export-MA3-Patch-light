@@ -12,7 +12,7 @@ Ce plugin permet d'exporter les données des Fixtures de **grandMA3** vers un fi
 - Exportation d'une page de statistique
 
 ## Installation
-1. **Télécharge** le fichier `.xml` du plugin.
+1. **Télécharge** le fichier `.zip` du plugin.
 2. **Ajoute-le** dans le dossier des plugins de **grandMA3**.
 3. Importe le dans un pool de plugin
 4. **Exécute le plugin** via la console **grandMA3**.
