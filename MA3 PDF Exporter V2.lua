@@ -5,7 +5,7 @@
   local print = Printf
   local error = ErrPrintf
 
-  local Machines, Time, ProgrammeursNames, ShowsNow, UserName = os.getenv("COMPUTERNAME") or os.getenv("HOSTNAME"), os.date("%Y-%m-%d %H:%M:%S"), "https://github.com/MayBeLinux", Root().manetsocket.showfile , UsersName
+  local Machines, Time, ProgrammeursNames, ShowsNow, UserName = os.getenv("COMPUTERNAME") or os.getenv("HOSTNAME"), os.date("%Y-%m-%d %H:%M:%S"), "https://github.com/MayBeLinux", Root().manetsocket.showfile , "User 1"
 
   local function generatePDF(path , fixtures , documentsnames , Users)
 
@@ -333,7 +333,8 @@ local function StatisticgenPdf(path)
   end
 
   
-  
+  local defaultFileName = "MA3_Export"  -- Default PDF document name
+  local usersName = "User 1"  -- Default author name
   
   local inputs = {
           {name = "Documents Name :",values = defaultFileName},-- MODIFIE LE NOM PAR DEFAULT DU DOCUMENTS PDF !
