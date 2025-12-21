@@ -521,12 +521,13 @@
 
 
   local function Main(displayHandle, argument)
-      tostring(displayHandle) 
-
-      if argument then
-        usbStickConnected()
-
+      -- Check if plugin is opened in a display view
+      if displayHandle then
+          -- Plugin opened in display - would need UI implementation
+          -- For now, execute normal flow
+          usbStickConnected()
       else
+          -- Plugin executed normally (not in display)
           usbStickConnected()
       end
   end
