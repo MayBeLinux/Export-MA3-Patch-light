@@ -5,7 +5,7 @@
   local print = Printf
   local error = ErrPrintf
 
-  local Machines, Time, ProgrammeursNames, ShowsNow, UserName = os.getenv("COMPUTERNAME") or os.getenv("HOSTNAME"), os.date("%Y-%m-%d %H:%M:%S"), "https://github.com/MayBeLinux", Root().manetsocket.showfile , UsersName
+  local Machines, Time, ProgrammeursNames, ShowsNow, UserName = os.getenv("COMPUTERNAME") or os.getenv("HOSTNAME"), os.date("%Y-%m-%d %H:%M:%S"), "https://github.com/MayBeLinux", Root().manetsocket.showfile , "User 1"
 
   local function generatePDF(path , fixtures , documentsnames , Users)
 
@@ -168,7 +168,7 @@
       print("PDF généré : %s", documentsnames)
   end
   
-local function StatisticgenPdf(path)
+  local function StatisticgenPdf(path)
     local directory = path .. "/MA3_EXPORT_PDF/"
 
     local fullpath = directory .. "Statistics_Report.pdf"
@@ -333,7 +333,8 @@ local function StatisticgenPdf(path)
   end
 
   
-  
+  local defaultFileName = "MA3_Export"  -- Default PDF document name
+  local usersName = "User 1"  -- Default author name
   
   local inputs = {
           {name = "Documents Name :",values = defaultFileName},-- MODIFIE LE NOM PAR DEFAULT DU DOCUMENTS PDF !
@@ -425,20 +426,20 @@ local function StatisticgenPdf(path)
     local FixturesData = collectFixtureData()
     generatePDF(drivePath, FixturesData, fileName, UsersName)
 
-elseif settings.result == 0 then 
+  elseif settings.result == 0 then 
 
-MessageBox({ 
+  MessageBox({ 
     title = "Error E3",
     message = "No values entry",
     messageTextColor = "Global.Text",
     icon = "logo_small",
     commands = {{value = 1, name = "Ok"}, {value = 0, name = "Cancel"}},
     })
-end
-end 
+  end
+  end 
 
-fixtureCount = -1   
-groupingCount = 0 
+  fixtureCount = -1   
+  groupingCount = 0 
 
   function extractFixturesFromGrouping(grouping, AllPatch, indent)
       indent = indent or "" 
@@ -519,13 +520,14 @@ groupingCount = 0
 
 
 
-local function Main(displayHandle, argument)
-      tostring(displayHandle) 
-
-      if argument then
-        usbStickConnected()
-
+  local function Main(displayHandle, argument)
+      -- Check if plugin is opened in a display view
+      if displayHandle then
+          -- Plugin opened in display - would need UI implementation
+          -- For now, execute normal flow
+          usbStickConnected()
       else
+          -- Plugin executed normally (not in display)
           usbStickConnected()
       end
   end
