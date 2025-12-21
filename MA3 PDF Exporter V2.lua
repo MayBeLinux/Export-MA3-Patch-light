@@ -168,7 +168,7 @@
       print("PDF généré : %s", documentsnames)
   end
   
-local function StatisticgenPdf(path)
+  local function StatisticgenPdf(path)
     local directory = path .. "/MA3_EXPORT_PDF/"
 
     local fullpath = directory .. "Statistics_Report.pdf"
@@ -426,20 +426,20 @@ local function StatisticgenPdf(path)
     local FixturesData = collectFixtureData()
     generatePDF(drivePath, FixturesData, fileName, UsersName)
 
-elseif settings.result == 0 then 
+  elseif settings.result == 0 then 
 
-MessageBox({ 
+  MessageBox({ 
     title = "Error E3",
     message = "No values entry",
     messageTextColor = "Global.Text",
     icon = "logo_small",
     commands = {{value = 1, name = "Ok"}, {value = 0, name = "Cancel"}},
     })
-end
-end 
+  end
+  end 
 
-fixtureCount = -1   
-groupingCount = 0 
+  fixtureCount = -1   
+  groupingCount = 0 
 
   function extractFixturesFromGrouping(grouping, AllPatch, indent)
       indent = indent or "" 
