@@ -520,7 +520,7 @@ groupingCount = 0
 
 
 
-local function Main(displayHandle, argument)
+  local function Main(displayHandle, argument)
       tostring(displayHandle) 
 
       if argument then
