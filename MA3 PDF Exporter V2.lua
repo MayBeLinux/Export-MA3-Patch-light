@@ -210,7 +210,7 @@ local function StatisticgenPdf(path)
         writePDFText(0 , 0 , 0 ,"Date : " .. os.date("%Y-%m-%d %H:%M:%S"),  50, startY - 42, 12),
         writePDFText(0 , 0 , 0 ,"Numbers of fixtures : " .. fixtureCount, 50,  startY - 70, 14),
         writePDFText(0 , 0 , 0 ,"Numbers of grouping : " .. groupingCount,  50, startY - 90, 14),
-        writePDFText(0 , 0 , 0 ,"Numbers of stages :" ..stagesCount,  50, startY - 110, 14),
+        writePDFText(0 , 0 , 0 ,"Numbers of stages : " .. stagesCount,  50, startY - 110, 14),
         writePDFText(0 , 0 , 0 ,"Numbers of parameters : " .. parameters, 50, startY - 130, 14),
         writePDFText(0 , 0 , 0 ,"This software plugin is proprietary and protected under copyright law. Unauthorized reproduction, distribution, modification, or resale of this software, in whole or in part, is strictly prohibited.", 3, startY - 760, 7),
         writePDFText(0, 0 , 0 ,"LumiArt - Studio", 3, startY - 767, 7),
