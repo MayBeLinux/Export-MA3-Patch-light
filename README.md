@@ -1,6 +1,9 @@
 # Export-MA3-Patch-lite
 # MA3 Fixture Data Exporter
 
+> **⚠️ grandMA3 v2.3 Compatibility Issue**  
+> If you get the error "Plugin does not found the Main function" on grandMA3 v2.3, see **[FIX_SUMMARY.md](FIX_SUMMARY.md)** for the solution!
+
 ## Description
 Ce plugin permet d'exporter les données des Fixtures de **grandMA3** vers un fichier **PDF**. Il récupère toutes les informations des Fixtures et les enregistre sur une clé USB.
 
