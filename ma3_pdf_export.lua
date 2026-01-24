@@ -38,6 +38,16 @@ local Config = {
     -- Author Info
     GITHUB_URL = "https://github.com/MayBeLinux",
     STUDIO_NAME = "LumiArt-Studio",
+
+    -- UI Theme
+    UI_THEME = {
+        backColor = "Global.Default",
+        icon = "logo_small",
+        titleTextColor = "Global.AlertText",
+        messageTextColor = "Global.Text",
+        align_h = "Left",
+        align_v = "Top",
+    },
 }
 
 local ErrorMessages = {
@@ -123,6 +133,13 @@ function Utils.safeValue(value, default)
     return default or "None"
 end
 
+function Utils.truncate(text, maxLen)
+    if #text > maxLen then
+        return text:sub(1, maxLen) .. "..."
+    end
+    return text
+end
+
 --------------------------------------------------------------------------------
 -- PDF Content Builders
 --------------------------------------------------------------------------------
@@ -193,7 +210,11 @@ function PDFWriter:addPage(content)
     self.pageObjects[#self.pageObjects + 1] = pageId
     
     local pageObj = string.format(
-        "%d 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Contents %d 0 R >>\nendobj",
+        "%d 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Contents %d 0 R " ..
+        "/Resources << /Font << " ..
+        "/F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> " ..
+        "/F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> " ..
+        ">> >> >>\nendobj",
         pageId, Config.PAGE_WIDTH, Config.PAGE_HEIGHT, pageId + 1
     )
     self:writeObject(pageObj)
@@ -280,25 +301,57 @@ function FixtureCollector.extractFromGrouping(grouping, allPatch, indent)
     end
 end
 
-function FixtureCollector.collectAll()
-    resetCounters()
-    local allPatch = {}
-    
-    for _, stage in ipairs(Patch().Stages) do
-        State.stagesCount = State.stagesCount + 1
-        
+function FixtureCollector.scanGroupings()
+    local stagesData = {}
+
+    for stageIndex, stage in ipairs(Patch().Stages) do
+        local stageName = stage.name or ("Stage " .. stageIndex)
+        local stageEntry = {
+            stageName = stageName,
+            groupings = {},
+            hasUngrouped = false,
+        }
+
         for _, fixture in ipairs(stage.fixtures) do
             if fixture.fixturetype and fixture.fixturetype.name == "Grouping" then
-                State.groupingCount = State.groupingCount + 1
-                table.insert(allPatch, FixtureCollector.createGroupingRecord(fixture.name))
-                FixtureCollector.extractFromGrouping(fixture, allPatch, "  ")
+                table.insert(stageEntry.groupings, fixture.name or "Unnamed Group")
             else
-                State.fixtureCount = State.fixtureCount + 1
-                table.insert(allPatch, FixtureCollector.createFixtureRecord(fixture))
+                stageEntry.hasUngrouped = true
+            end
+        end
+
+        table.insert(stagesData, stageEntry)
+    end
+
+    return stagesData
+end
+
+function FixtureCollector.collectAll(filter)
+    resetCounters()
+    local allPatch = {}
+
+    for stageIndex, stage in ipairs(Patch().Stages) do
+        State.stagesCount = State.stagesCount + 1
+        local stageName = stage.name or ("Stage " .. stageIndex)
+        local stageFilter = filter and filter.stages[stageName] or nil
+
+        for _, fixture in ipairs(stage.fixtures) do
+            if fixture.fixturetype and fixture.fixturetype.name == "Grouping" then
+                local groupName = fixture.name or "Unnamed Group"
+                if not stageFilter or not stageFilter.excludedGroupings[groupName] then
+                    State.groupingCount = State.groupingCount + 1
+                    table.insert(allPatch, FixtureCollector.createGroupingRecord(fixture.name))
+                    FixtureCollector.extractFromGrouping(fixture, allPatch, "  ")
+                end
+            else
+                if not stageFilter or stageFilter.includeUngrouped then
+                    State.fixtureCount = State.fixtureCount + 1
+                    table.insert(allPatch, FixtureCollector.createFixtureRecord(fixture))
+                end
             end
         end
     end
-    
+
     return allPatch
 end
 
@@ -333,9 +386,11 @@ local function generateMainPDF(outputPath, fixtures, documentName, userName)
     local function buildRowContent(row, y)
         local content = ""
         
+        local displayName = Utils.truncate(tostring(row.Name), 25)
+
         if row.FID == "------" then
             content = content .. ContentBuilder.colorBlock(1, 0, 0)
-            content = content .. ContentBuilder.textBold(row.Name, Config.START_X, y, 13)
+            content = content .. ContentBuilder.textBold(displayName, Config.START_X, y, 13)
             content = content .. ContentBuilder.colorBlock(0, 0, 0)
             return content, Config.ROW_HEIGHT - 2
         else
@@ -344,8 +399,8 @@ local function generateMainPDF(outputPath, fixtures, documentName, userName)
                 Config.START_X - 31, lineY,
                 Config.PAGE_WIDTH - Config.MARGIN + 40, lineY
             )
-            
-            local values = {row.FID, row.IDType, row.CID, row.Name, row.FixtureTypes, row.UAddrs}
+
+            local values = {row.FID, row.IDType, row.CID, displayName, row.FixtureTypes, row.UAddrs}
             for i, value in ipairs(values) do
                 content = content .. ContentBuilder.text(
                     tostring(value),
@@ -467,20 +522,49 @@ local function generateStatisticsPDF(outputPath)
     table.insert(content, ContentBuilder.text(Config.STUDIO_NAME, 3, startY - 747, 7))
     
     local pdfContent = table.concat(content)
-    
-    -- Write PDF structure
-    file:write("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
-    file:write("2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n")
-    file:write(string.format(
-        "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Contents 4 0 R >>\nendobj\n",
+
+    -- Write PDF structure with tracked byte offsets
+    local offset = #Config.PDF_VERSION
+    local xrefs = {}
+
+    local obj1 = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+    xrefs[1] = offset
+    file:write(obj1)
+    offset = offset + #obj1
+
+    local obj2 = "2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n"
+    xrefs[2] = offset
+    file:write(obj2)
+    offset = offset + #obj2
+
+    local obj3 = string.format(
+        "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Contents 4 0 R " ..
+        "/Resources << /Font << " ..
+        "/F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> " ..
+        "/F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> " ..
+        ">> >> >>\nendobj\n",
         Config.PAGE_WIDTH, Config.PAGE_HEIGHT
-    ))
-    file:write(string.format(
+    )
+    xrefs[3] = offset
+    file:write(obj3)
+    offset = offset + #obj3
+
+    local obj4 = string.format(
         "4 0 obj\n<< /Length %d >>\nstream\n%sendstream\nendobj\n",
         #pdfContent, pdfContent
+    )
+    xrefs[4] = offset
+    file:write(obj4)
+    offset = offset + #obj4
+
+    file:write("xref\n0 5\n0000000000 65535 f \n")
+    for i = 1, 4 do
+        file:write(string.format("%010d 00000 n \n", xrefs[i]))
+    end
+    file:write(string.format(
+        "trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF",
+        offset
     ))
-    file:write("xref\n0 5\n0000000000 65535 f\n0000000010 00000 n\n0000000050 00000 n\n0000000100 00000 n\n0000000200 00000 n\n")
-    file:write("trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n200\n%%EOF")
     
     file:close()
     print("Statistics PDF generated")
@@ -532,85 +616,185 @@ end
 
 local UI = {}
 
+function UI.dialog(options)
+    local theme = Config.UI_THEME
+    local params = {
+        title = options.title or "MA3 PDF Exporter",
+        message = options.message or "",
+        message_align_h = Enums.AlignmentH[theme.align_h],
+        message_align_v = Enums.AlignmentV[theme.align_v],
+        commands = options.commands or {{value = 1, name = "Ok"}, {value = 0, name = "Cancel"}},
+        backColor = theme.backColor,
+        icon = theme.icon,
+        titleTextColor = theme.titleTextColor,
+        messageTextColor = theme.messageTextColor,
+    }
+
+    if options.inputs then params.inputs = options.inputs end
+    if options.selectors then params.selectors = options.selectors end
+    if options.timeout then params.timeout = options.timeout end
+
+    return MessageBox(params)
+end
+
 function UI.showError(title, message)
-    MessageBox({
+    UI.dialog({
         title = title,
         message = message,
         commands = {{value = 1, name = "OK"}},
-        timeout = 5000
+        timeout = 5000,
     })
 end
 
-function UI.showExportDialog()
-    local inputs = {
-        {name = "Documents Name:", values = Config.DEFAULT_FILE_NAME},
-        {name = "Users", values = Config.DEFAULT_USER_NAME},
-    }
-    
-    local selectors = {
-        {
-            name = "USB DRIVES",
-            values = USBManager.drives,
-            path = USBManager.paths,
-            selectedValue = USBManager.idCounter,
-            type = 1
-        },
-        {
-            name = "Statistic Tables",
-            selectedValue = 2,
-            values = {["Include"] = 1, ["Exclude"] = 2},
-            type = 1
-        }
-    }
-    
-    return MessageBox({
-        title = "Export PDF",
-        message = "Enter a name for your document and specify the programmer's name. " ..
-                  "If you want to include a statistics page, select 'Include' from the options. " ..
-                  "Then, click 'OK' to generate the PDF. Make sure a USB stick is connected for saving.",
-        message_align_h = Enums.AlignmentH.Left,
-        message_align_v = Enums.AlignmentV.Top,
-        commands = {{value = 1, name = "Ok"}, {value = 0, name = "Cancel"}},
-        inputs = inputs,
+function UI.showGroupingDialog(stagesData)
+    local selectors = {}
+    local stageCount = #stagesData
+
+    for _, stageEntry in ipairs(stagesData) do
+        local prefix = stageCount > 1 and (stageEntry.stageName .. " | ") or ""
+
+        for _, groupName in ipairs(stageEntry.groupings) do
+            table.insert(selectors, {
+                name = prefix .. groupName,
+                selectedValue = 1,
+                values = {["Include"] = 1, ["Exclude"] = 2},
+                type = 1
+            })
+        end
+
+        if stageEntry.hasUngrouped then
+            table.insert(selectors, {
+                name = prefix .. "Ungrouped Fixtures",
+                selectedValue = 1,
+                values = {["Include"] = 1, ["Exclude"] = 2},
+                type = 1
+            })
+        end
+    end
+
+    return UI.dialog({
+        title = "PDF Export - Select Groupings",
+        message = "Choose which groupings to include in the export.\n" ..
+                  "Each item can be set to Include or Exclude.",
         selectors = selectors,
-        backColor = "Global.Default",
-        icon = "logo_small",
-        titleTextColor = "Global.AlertText",
-        messageTextColor = "Global.Text",
-        autoCloseOnInput = true
+    })
+end
+
+function UI.buildFilterFromSelections(settings, stagesData)
+    local filter = { stages = {} }
+    local stageCount = #stagesData
+
+    for _, stageEntry in ipairs(stagesData) do
+        local prefix = stageCount > 1 and (stageEntry.stageName .. " | ") or ""
+        local stageFilter = {
+            excludedGroupings = {},
+            includeUngrouped = true,
+        }
+
+        for _, groupName in ipairs(stageEntry.groupings) do
+            if settings.selectors[prefix .. groupName] == 2 then
+                stageFilter.excludedGroupings[groupName] = true
+            end
+        end
+
+        if stageEntry.hasUngrouped and settings.selectors[prefix .. "Ungrouped Fixtures"] == 2 then
+            stageFilter.includeUngrouped = false
+        end
+
+        filter.stages[stageEntry.stageName] = stageFilter
+    end
+
+    return filter
+end
+
+function UI.showExportDialog()
+    return UI.dialog({
+        title = "PDF Export - Settings",
+        message = "Configure your export settings below.\n" ..
+                  "Ensure a USB drive is connected.",
+        inputs = {
+            {name = "Document Name", values = Config.DEFAULT_FILE_NAME},
+            {name = "Programmer", values = Config.DEFAULT_USER_NAME},
+        },
+        selectors = {
+            {
+                name = "USB Drive",
+                values = USBManager.drives,
+                path = USBManager.paths,
+                selectedValue = USBManager.idCounter,
+                type = 1
+            },
+            {
+                name = "Statistics Page",
+                selectedValue = 2,
+                values = {["Include"] = 1, ["Exclude"] = 2},
+                type = 1
+            },
+        },
     })
 end
 
 function UI.processExportRequest(drives)
+    -- Step 1: Scan for groupings across all stages
+    local stagesData = FixtureCollector.scanGroupings()
+
+    -- Step 2: Show grouping selection dialog (only if there are groupings or fixtures)
+    local filter = nil
+    local hasContent = false
+    for _, stageEntry in ipairs(stagesData) do
+        if #stageEntry.groupings > 0 or stageEntry.hasUngrouped then
+            hasContent = true
+            break
+        end
+    end
+
+    if hasContent then
+        local groupingSettings = UI.showGroupingDialog(stagesData)
+
+        if groupingSettings.result ~= 1 then
+            return
+        end
+
+        filter = UI.buildFilterFromSelections(groupingSettings, stagesData)
+    end
+
+    -- Step 3: Show export dialog
     local settings = UI.showExportDialog()
-    
+
     if settings.result ~= 1 then
         UI.showError("Error E3", "No values entry")
         return
     end
-    
+
     -- Get selected drive path
-    local drivePath = drives[2].path
-    
+    local selectedDriveId = settings.selectors["USB Drive"]
+    local drivePath = USBManager.paths[selectedDriveId]
+
     -- Generate statistics PDF if requested
-    if settings.selectors["Statistic Tables"] == 1 then
+    if settings.selectors["Statistics Page"] == 1 then
         generateStatisticsPDF(drivePath)
     end
-    
-    -- Get document name with fallback
-    local fileName = settings.inputs["Documents Name:"]
+
+    -- Get document name
+    local fileName = settings.inputs["Document Name"]
     if not fileName or fileName == "" then
         fileName = Config.DEFAULT_FILE_NAME
     end
-    
-    -- Get user name with fallback
-    local userName = settings.inputs["Users"]
+
+    -- Get programmer name
+    local userName = settings.inputs["Programmer"]
     if not userName or userName == "" then
         userName = Config.DEFAULT_USER_NAME
     end
-    
-    -- Collect fixture data and generate PDF
-    local fixturesData = FixtureCollector.collectAll()
+
+    -- Collect filtered fixture data and generate PDF
+    local fixturesData = FixtureCollector.collectAll(filter)
+
+    if #fixturesData == 0 then
+        UI.showError("Empty Export", "All groupings were excluded. No data to export.")
+        return
+    end
+
     generateMainPDF(drivePath, fixturesData, fileName, userName)
 end
 
