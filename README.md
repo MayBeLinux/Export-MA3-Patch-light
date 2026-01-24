@@ -11,12 +11,13 @@
 
 ## Features
 
-- 📄 **PDF Export** — Generate professional PDF documents with fixture tables
-- 📊 **Statistics Report** — Optional statistics page with fixture counts and parameter info
-- 🔌 **USB Auto-Detection** — Automatically detects connected USB drives
-- 📋 **Complete Patch Data** — Exports FID, IDType, CID, Name, Fixture Type, Mode, and Universe Address
-- 📁 **Grouping Support** — Preserves fixture grouping hierarchy in the export
-- 🖥️ **System Info** — Includes show name, date, hostname, and author in the document
+-  **PDF Export** — Generate professional PDF documents with fixture tables
+-  **Statistics Report** — Optional statistics page with fixture counts and parameter info
+-  **USB Auto-Detection** — Automatically detects connected USB drives
+-  **Complete Patch Data** — Exports FID, IDType, CID, Name, Fixture Type, Mode, and Universe Address
+-  **Grouping Support** — Preserves fixture grouping hierarchy in the export
+-  **Grouping Filter** — Select which groupings to include/exclude per stage before exporting
+-  **System Info** — Includes show name, date, hostname, and author in the document
 
 ## Installation
 
@@ -31,13 +32,17 @@
 
 1. **Connect a USB drive** to your console or computer
 2. **Execute the plugin** from your Plugin Pool
-3. **Configure export settings:**
+3. **Select groupings to export:**
+   - Each detected grouping is listed with its stage (when multiple stages exist)
+   - Set each grouping to **Include** or **Exclude**
+   - Ungrouped fixtures can also be included/excluded
+4. **Configure export settings:**
    - Enter a document name
-   - Enter the author/programmer name
+   - Enter the programmer name
    - Select the target USB drive
    - Choose whether to include the statistics page
-4. **Click OK** to generate the PDF
-5. **Find your PDF** in the `MA3_EXPORT_PDF` folder on your USB drive
+5. **Click OK** to generate the PDF
+6. **Find your PDF** in the `MA3_EXPORT_PDF` folder on your USB drive
 
 ## Exported Data
 
@@ -73,6 +78,29 @@ USB Drive/
     ├── YourDocumentName.pdf
     └── Statistics_Report.pdf (optional)
 ```
+
+## Changelog
+
+### v2.1.0
+
+#### Bug Fixes
+
+| Bug | Cause | Fix |
+|-----|-------|-----|
+| **Blank PDF pages** — 13 pages exported with grid lines but no text content | PDF page objects had no `/Resources` dictionary defining fonts. PDF viewers could draw lines but couldn't render text without knowing what `/F1` and `/F2` fonts are. | Added `/Resources` block with Helvetica (F1) and Helvetica-Bold (F2) Type1 font declarations to all page objects. |
+| **USB drive selection ignored** — Output always went to the first USB drive regardless of user selection | The code hardcoded `drives[2].path` instead of reading the user's selected drive from the dialog result. | Now reads `settings.selectors["USB Drive"]` and maps it to the correct path via `USBManager.paths`. |
+| **Statistics page blank** — Same blank rendering as main PDF, plus potential parsing failures | Missing font resources (same as main PDF) and hardcoded fake xref byte offsets (`10, 50, 100, 200`) that didn't match actual object positions. | Added font resources and implemented proper byte offset tracking for the xref table. |
+
+#### New Features
+
+- **Grouping Selection Filter** — A new dialog appears before the export settings, listing all detected groupings organized by stage. Each grouping (and ungrouped fixtures) can be set to Include or Exclude. Only selected data is exported to PDF.
+  - When a single stage exists, groupings are listed without a prefix
+  - When multiple stages exist, each grouping is prefixed with its stage name (e.g., `Stage 1 | Moving Lights`)
+  - If all items are excluded, an error is shown instead of generating a blank PDF
+
+- **Name Column Truncation** — Fixture names longer than 25 characters are automatically truncated with `...` to prevent text overflow into adjacent columns.
+
+- **UI Theme System** — All dialogs now share a centralized theme configuration (`Config.UI_THEME`), making the interface consistent and easy to customize.
 
 ## Author
 
